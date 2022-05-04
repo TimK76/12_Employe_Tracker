@@ -1,48 +1,58 @@
+const { response } = require("express");
 const inquirer = require("inquirer");
 const db = require("./db/connections");
 
 db.connect(function (err) {
   if (err) throw error;
-  startMenu();
 });
 
-function menuQuestions() {
+const menuQuestions = 
   [
     {
       type: "list",
       name: "menu",
-      message: "What would you likd to do?",
+      message: "What would you like to do?",
       choices: [
         "View All Departments",
         "View All Roles",
         "View All Employees",
-        "View Employees by Manager",
+        // "View Employees by Manager",
         "Add a Department",
         "Add a Role",
         "Add an Employee",
         "Update an Employee's Role",
-        "Update an Employee's Manager",
+        // "Update an Employee's Manager",
       ],
-    },
+    }
   ];
-}
 
-function insertQuestions() {
-  [
+const addDepartmentQuestions = 
     {
       type: "input",
       name: "department",
       message: "What is the name of the new Department?",
+    };
+
+const addRoleQuestions =
+    [
+    {
+      type: "input",
+      name: "title",
+      message: "What is the title of the new role?",
+    },    
+    {
+      type: "input",
+      name: "salary",
+      message: "What is the salary?",
     },
     {
       type: "input",
-      name: "role",
-      message: "What is the name of the new Role?",
-    },
+      name: "department_id",
+      message: "What is the department id?",
+    }
   ];
-}
 
-function newEmpQuestions() {
+const addEmployeeQuestions =
   [
     {
       type: "input",
@@ -63,90 +73,176 @@ function newEmpQuestions() {
       type: "input",
       name: "manid",
       message: "Who is the new employee's manager?",
-    },
+    }
   ];
-}
 
 function viewDep() {
   db.query(`SELECT * FROM department`, (err, rows) => {
     console.table(rows);
+    startMenu();
   });
-}
+};
 
 function viewRole() {
   db.query(`SELECT * FROM role`, (err, rows) => {
     console.table(rows);
+    startMenu();
   });
-}
+};
 
 function viewEmp() {
   db.query(`SELECT * FROM employee`, (err, rows) => {
     console.table(rows);
+    startMenu();
   });
-}
+};
 
-function viewEmpByMan() {
-  db.query(`SELECT * FROM employee WHERE manager =?`, (err, rows) => {
-    console.table(rows);
-  });
-}
+// function viewEmpByMan() {
+//   db.query(`SELECT * FROM employee WHERE manager =?`, (err, rows) => {
+//     console.table(rows);
+//     startMenu();
+//   });
+// };
 
 function addDep() {
-  db.query(
-    `INSERT INTO department VALUES (${insertQuestions.department})`,
-    (err, rows) => {
-      console.table(rows);
+  inquirer.prompt(addDepartmentQuestions).then((response) => {
+    db.query(`INSERT INTO department(name) VALUES (?)`,
+    response.department,
+    (err, results) => {
+      if (err) {
+        console.log(err);
+      }
+    db.query(`SELECT * FROM department`, 
+    (err, results) => {
+      console.table(results);
+      startMenu();
+    });
     }
-  );
+    );
+  });
+};
+
+// title, salary, department_id
+function addRole() {
+  db.query('SELECT * FROM department', (err, results) => {
+    console.table(results);
+    if (err) {
+      console.log(error);
+    }
+    inquirer.prompt(addRoleQuestions).then((response) => {
+    db.query(`INSERT INTO role(title,salary,department_id) VALUES (?, ?, ?)`,
+    [response.title, response.salary, response.department_id],
+    (err, results) => {
+      if (err) {
+        console.log(err);
+      }
+    db.query(`SELECT * FROM role`, 
+    (err, results) => {
+      console.table(results);
+      startMenu();
+    });
+    }
+    );
+  });
+});
 }
 
-function addRole() {
-  db.query(`INSERT INTO role VALUES (${insertQuestions.role})`, (err, rows) => {
-    console.table(rows);
-  });
-}
+// db.query(`INSERT INTO role VALUES (${insertQuestions.role})`, (err, rows) => {
+//     console.table(rows);
+//     startMenu();
+//   });
+// }
+
 
 function addEmp() {
-  db.query(
-    `INSERT INTO employee VALUES (${newEmpQuestions.fname}, ${newEmpQuestions.lname},  ${newEmpQuestions.roleid}, ${newEmpQuestions.manid})`,
-    (err, rows) => {
-      console.table(rows);
-    }
-  );
-}
+  db.query('SELECT * FROM role', (err, results) => {
+    console.table(results);
+      db.query('SELECT * FROM employee', (err, results) => {
+        console.table(results);
+        inquirer.prompt(addEmployeeQuestions).then((response) => {
+          db.query(
+            `INSERT INTO employee(first_name,last_name,role_id,manager_id) VALUES (?,?,?,?)`,
+          [
+          response.fname,
+          response.lname,
+          response.roleid,
+          response.manid
+          ],
+          (err, results) => {
+            db.query('SELECT * FROM employee', (err, results) => {
+              console.table(results);
+              startMenu();
+            });
+          }
+        );
+      });
+    });
+  })
+};
 
 function updateEmpRole() {
-  db.query(`UPDATE employee SET role_id = ?`);
-  console.table(rows);
-}
-
-function updateEmpMan() {
-  db.query(`UPDATE employee SET manager_id = ?`);
-  console.table(rows);
-}
+  db.query(`SELECT * FROM role`, (err, results) => {
+    console.table(results);
+  const roleOptions = results.map((obj) => {
+    return { name: obj.title, value: obj.id };
+  });
+  db.query('SELECT * FROM employee', (err, results) => {
+    console.table(results);
+    const empOptions = results.map((obj) => {
+      return { name: obj.first_name, value: obj.id };
+    });
+    const newRoleQuestions = [
+      {
+        name: "employees",
+        type: "list",
+        message: "Which employee would you like to update?",
+        choices: empOptions
+      },
+      {
+        name: "roles",
+        type: "list",
+        message: "Which role would you like to reassign to the employee?",
+        choices: roleOptions
+      }
+    ];
+    inquirer.prompt(newRoleQuestions).then((response) => {
+      db.query('UPDATE employee SET role_id = ? WHERE id = ?',
+      [response.role, response.employee],
+      (err, results) => {
+        db.query('SELECT * FROM employee', (err, results) => {
+          console.table(results);
+          startMenu();
+        });
+      }
+    );
+  });
+});
+});
+};
 
 function startMenu() {
   inquirer.prompt(menuQuestions).then((answer) => {
+    
     if (answer.menu === "View All Departments") {
-      viewDep().then(inquirer.prompt(menuQuestions));
-    } else if (answer.menu === "View All Roles") {
-      viewRole().then(inquirer.prompt(menuQuestions));
+      viewDep();
+    } else if (answer.menu === "View All Roles") {   
+      viewRole();
     } else if (answer.menu === "View All Employees") {
-      viewEmp(inquirer.prompt(menuQuestions));
+      viewEmp();
     } else if (answer.menu === "View Employees by Manager") {
-      viewEmpByMan().then(inquirer.prompt(menuQuestions));
+      viewEmpByMan();
     } else if (answer.menu === "Add a Department") {
-      addDep().then(inquirer.prompt(menuQuestions));
+      addDep();
     } else if (answer.menu === "Add a Role") {
-      addRole().then(inquirer.prompt(menuQuestions));
+      addRole();
     } else if (answer.menu === "Add an Employee") {
-      addEmp().then(inquirer.prompt(menuQuestions));
+      addEmp();
     } else if (answer.menu === "Update an Employee's Role") {
-      updateEmpRole().then(inquirer.prompt(menuQuestions));
+      updateEmpRole();
     } else if (answer.menu === "Update an Employee's Manager") {
-      updateEmpMan().then(inquirer.prompt(menuQuestions));
+      updateEmpMan();
     }
   });
-}
+};
 
 startMenu();
