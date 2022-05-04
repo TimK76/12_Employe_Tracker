@@ -229,8 +229,8 @@ function startMenu() {
       viewRole();
     } else if (answer.menu === "View All Employees") {
       viewEmp();
-    } else if (answer.menu === "View Employees by Manager") {
-      viewEmpByMan();
+    // } else if (answer.menu === "View Employees by Manager") {
+    //   viewEmpByMan();
     } else if (answer.menu === "Add a Department") {
       addDep();
     } else if (answer.menu === "Add a Role") {
@@ -239,8 +239,8 @@ function startMenu() {
       addEmp();
     } else if (answer.menu === "Update an Employee's Role") {
       updateEmpRole();
-    } else if (answer.menu === "Update an Employee's Manager") {
-      updateEmpMan();
+    // } else if (answer.menu === "Update an Employee's Manager") {
+    //   updateEmpMan();
     }
   });
 };
